@@ -13,7 +13,7 @@ Amazon S3 for backup and long term storage.
    * Run the deploy.sh script. It is intended to run on linux and Mac. The script does the following:
    *Note: The script requires some parameters. See [Setup Lambda](https://amazonmsk-labs.workshop.aws/en/msklambda/setuplambda.html) for details.*
     
-       1. It install AWS SAM CLI if it is not installed.
+       1. It installs AWS SAM CLI if it is not installed.
        2. It creates an Amazon S3 bucket to be used for uploaded artifacts with a random prefix in its name.
        3. It uses sam to build the Lambda function and package its resources.
        4. It deploys the sam template and creates a CloudFormation stack with multiple resources. The resources include:
