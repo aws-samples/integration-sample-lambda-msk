@@ -1,0 +1,6 @@
+# Project exclude paths
+/target/
+dependency-reduced-pom.xml
+.idea/
+MSKToS3Lambda.iml
+/.aws-sam/
