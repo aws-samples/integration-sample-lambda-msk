@@ -10,7 +10,7 @@ Amazon S3 for backup and long term storage.
          git clone https://github.com/aws-samples/integration-sample-lambda-msk.git
          cd integration-sample-lambda-msk
     
-   * Run the deploy.sh script. It is intended to run on linux and Mac. The script does the following:
+   * Run the deploy.sh script. It is intended to run on linux and Mac. The script does the following:   
    *Note: The script requires some parameters. See [Setup Lambda](https://amazonmsk-labs.workshop.aws/en/msklambda/setuplambda.html) for details.*
     
        1. It installs AWS SAM CLI if it is not installed.
