@@ -1,7 +1,6 @@
 #!/bin/bash
 set -eo pipefail
 STACK=java-events
-REGION=us-east-1
 if [[ $# -eq 1 ]] ; then
     STACK=$1
     echo "Deleting stack $STACK"
@@ -10,7 +9,8 @@ else
      echo "Usage: cleanup.sh <Stack name>"
      exit 1
 fi
-FUNCTION=$(aws cloudformation describe-stack-resource --stack-name $STACK --logical-resource-id ProcessMSKfunction --query 'StackResourceDetail.PhysicalResourceId' --output text)
+s3_data_bucket=$(aws cloudformation describe-stack-resource --stack-name $STACK --logical-resource-id s3bucket --query 'StackResourceDetail.PhysicalResourceId' --output text)
+FUNCTION=$(aws2 cloudformation list-stack-resources --stack-name $STACK --query 'StackResourceSummaries[?contains(ResourceType, `AWS::Lambda::Function`) == `true`].PhysicalResourceId' --output text)
 aws cloudformation delete-stack --stack-name $STACK
 echo "Deleted $STACK stack."
 if [ -f /tmp/bucket-name.txt ]; then
@@ -28,6 +28,16 @@ if [ -f /tmp/bucket-name.txt ]; then
         done
     fi
 fi
+
+while true; do
+  read -p "Delete data and bucket ($s3_data_bucket)? (y/n)" response
+  case $response in
+      [Yy]* ) aws s3 rb --force s3://$s3_data_bucket; break;;
+      [Nn]* ) break;;
+      * ) echo "Response must start with y or n.";;
+  esac
+done
+
 while true; do
     read -p "Delete function log group (/aws/lambda/$FUNCTION)? (y/n)" response
     case $response in

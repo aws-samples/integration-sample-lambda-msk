@@ -25,16 +25,39 @@ Parameters:
     MinValue: 1
     MaxValue: 5
     Default: 3
+  OtherSchemaRegistry:
+    Description: Are you only using a Schema Registry other than the AWS Glue Schema Registry
+    Type: String
+    Default: false
+    AllowedValues:
+      - true
+      - false
+  SecondaryDeserializer:
+    Description: Do you have records using a mix of the AWS Glue Schema Registry and another Schema Registry
+    Type: String
+    Default: false
+    AllowedValues:
+      - true
+      - false
+Conditions:
+  CreateVPCResources: !Or
+    - !Equals [ !Ref OtherSchemaRegistry, true ]
+    - !Equals [ !Ref SecondaryDeserializer, true ]
+  NoVPCResources: !And
+    - !Equals [ !Ref OtherSchemaRegistry, false ]
+    - !Equals [ !Ref SecondaryDeserializer, false ]
 
 Resources:
-  ProcessMSKfunction:
+  ProcessMSKfunctionCSR:
     Type: AWS::Serverless::Function
+    DependsOn: MSKToS3LambdaPolicy
+    Condition: CreateVPCResources
     Properties:
-      CodeUri: .
+      CodeUri: ./target/MSKToS3Lambda-1.0-SNAPSHOT.jar
       Handler: com.amazonaws.kafka.samples.HandlerMSK
       Runtime: java8
       Description: Java function
-      MemorySize: 256
+      MemorySize: 512
       Timeout: 300
       VpcConfig:
         SecurityGroupIds:
@@ -54,6 +77,39 @@ Resources:
               !Sub "${BastionStack}-SchemaRegistryUrl"
           DELIVERY_STREAM_NAME: !Ref deliverystream
           RETRIES: !Ref LambdaRetries
+          CSR: !Ref OtherSchemaRegistry
+          SECONDARY_DESERIALIZER: !Ref SecondaryDeserializer
+      # Function's execution role
+      Role: !GetAtt LambdaRole.Arn
+      Events:
+        MSKEvent:
+          Type: MSK
+          Properties:
+            StartingPosition: TRIM_HORIZON
+            Stream:
+              Fn::ImportValue:
+                !Sub "${MSKStack}-MSKClusterArn"
+            BatchSize: !Ref BatchSize
+            Topics:
+              - ExampleTopic
+
+  ProcessMSKfunctionGSR:
+    Type: AWS::Serverless::Function
+    DependsOn: MSKToS3LambdaPolicy
+    Condition: NoVPCResources
+    Properties:
+      CodeUri: ./target/MSKToS3Lambda-1.0-SNAPSHOT.jar
+      Handler: com.amazonaws.kafka.samples.HandlerMSK
+      Runtime: java8
+      Description: Java function
+      MemorySize: 512
+      Timeout: 300
+      Environment:
+        Variables:
+          DELIVERY_STREAM_NAME: !Ref deliverystream
+          RETRIES: !Ref LambdaRetries
+          CSR: !Ref OtherSchemaRegistry
+          SECONDARY_DESERIALIZER: !Ref SecondaryDeserializer
       # Function's execution role
       Role: !GetAtt LambdaRole.Arn
       Events:
@@ -83,6 +139,7 @@ Resources:
               - ec2:DeleteNetworkInterface
               - ec2:DescribeSubnets
               - ec2:DescribeSecurityGroups
+              - glue:GetSchemaVersion
             Resource: '*'
           - Effect: Allow
             Action:
@@ -111,13 +168,10 @@ Resources:
             Action: 'sts:AssumeRole'
       Path: "/"
       ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
   s3bucket:
     Type: AWS::S3::Bucket
     DeletionPolicy: Retain
-    Properties:
-      VersioningConfiguration:
-        Status: Enabled
 
   deliverystream:
     Type: AWS::KinesisFirehose::DeliveryStream
