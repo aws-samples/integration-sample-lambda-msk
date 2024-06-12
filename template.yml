@@ -197,6 +197,13 @@ Resources:
             - - 'KDF-MSKToS3'
           LogStreamName: S3Delivery
         S3BackupMode: Disabled
+  deliveryLogGroup
+    Type : AWS::Logs::LogGroup
+    Properties:
+      LogGroupClass: STANDARD
+      LogGroupName: /aws/kinesisfirehose/KDF-MSKToS3/
+      RetentionInDays: 14
+
 
   deliveryRole:
     Type: AWS::IAM::Role
