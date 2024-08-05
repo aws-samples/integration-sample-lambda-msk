@@ -197,7 +197,7 @@ Resources:
             - - 'KDF-MSKToS3'
           LogStreamName: S3Delivery
         S3BackupMode: Disabled
-  deliveryLogGroup
+  deliveryLogGroup:
     Type : AWS::Logs::LogGroup
     Properties:
       LogGroupClass: STANDARD
