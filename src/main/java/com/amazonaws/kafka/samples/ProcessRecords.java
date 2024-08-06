@@ -84,7 +84,7 @@ class ProcessRecords {
             }
 
             if (clickEvent != null)
-                sendKinesisDataFirehose.addFirehoseRecordToBatch(clickEvent.toString(), requestId);
+                sendKinesisDataFirehose.addFirehoseRecordToBatch(clickEvent.toString().concat("\n"), requestId);
         }));
     }
 
