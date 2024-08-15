@@ -149,7 +149,9 @@ Resources:
               - kafka-cluster:DescribeTopic
               - kafka-cluster:ReadData
               - kafka-cluster:DescribeClusterDynamicConfiguration
-            Resource: '*'  
+            Resource:
+                  - !Sub 'arn:aws:kafka:${AWS::Region}:${AWS::AccountId}:cluster/*'
+                  - !Sub 'arn:aws:kafka:${AWS::Region}:${AWS::AccountId}:topic/*'
           - Effect: Allow
             Action:
               - firehose:PutRecordBatch
