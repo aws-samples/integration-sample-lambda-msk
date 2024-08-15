@@ -10,7 +10,7 @@ else
      exit 1
 fi
 s3_data_bucket=$(aws cloudformation describe-stack-resource --stack-name $STACK --logical-resource-id s3bucket --query 'StackResourceDetail.PhysicalResourceId' --output text)
-FUNCTION=$(aws2 cloudformation list-stack-resources --stack-name $STACK --query 'StackResourceSummaries[?contains(ResourceType, `AWS::Lambda::Function`) == `true`].PhysicalResourceId' --output text)
+FUNCTION=$(aws cloudformation list-stack-resources --stack-name $STACK --query 'StackResourceSummaries[?contains(ResourceType, `AWS::Lambda::Function`) == `true`].PhysicalResourceId' --output text)
 aws cloudformation delete-stack --stack-name $STACK
 echo "Deleted $STACK stack."
 if [ -f /tmp/bucket-name.txt ]; then
