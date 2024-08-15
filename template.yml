@@ -143,6 +143,17 @@ Resources:
             Resource: '*'
           - Effect: Allow
             Action:
+              - kafka-cluster:Connect
+              - kafka-cluster:DescribeGroup
+              - kafka-cluster:AlterGroup
+              - kafka-cluster:DescribeTopic
+              - kafka-cluster:ReadData
+              - kafka-cluster:DescribeClusterDynamicConfiguration
+            Resource:
+                  - !Sub 'arn:aws:kafka:${AWS::Region}:${AWS::AccountId}:cluster/*'
+                  - !Sub 'arn:aws:kafka:${AWS::Region}:${AWS::AccountId}:topic/*'
+          - Effect: Allow
+            Action:
               - firehose:PutRecordBatch
             Resource: !GetAtt deliverystream.Arn
           - Effect: Allow
