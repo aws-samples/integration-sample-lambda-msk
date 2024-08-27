@@ -152,6 +152,7 @@ Resources:
             Resource:
                   - !Sub 'arn:aws:kafka:${AWS::Region}:${AWS::AccountId}:cluster/*'
                   - !Sub 'arn:aws:kafka:${AWS::Region}:${AWS::AccountId}:topic/*'
+                  - !Sub 'arn:aws:kafka:${AWS::Region}:${AWS::AccountId}:group/*'
           - Effect: Allow
             Action:
               - firehose:PutRecordBatch
