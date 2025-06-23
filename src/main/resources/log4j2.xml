@@ -1,26 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
-
-<Configuration status="WARN">
+<Configuration status="INFO">
     <Appenders>
-        <Lambda name="Lambda">
-            <PatternLayout>
-                <pattern>[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n</pattern>
-            </PatternLayout>
-        </Lambda>
+        <Console name="JsonAppender" target="SYSTEM_OUT">
+            <JsonTemplateLayout eventTemplateUri="classpath:LambdaJsonLayout.json" />
+        </Console>
     </Appenders>
     <Loggers>
+        <Logger name="com.amazonaws.kafka.samples" level="INFO" additivity="false">
+            <AppenderRef ref="JsonAppender"/>
+        </Logger>
         <Root level="INFO">
-            <AppenderRef ref="Lambda"/>
+            <AppenderRef ref="JsonAppender"/>
         </Root>
-        <Logger name="software.amazon.awssdk" level="warn" additivity="false">
-            <AppenderRef ref="Lambda"/>
-        </Logger>
-        <Logger name="software.amazon.awssdk.request" level="warn"/>
-        <Logger name="com.amazonaws.kafka.samples" level="info" additivity="false">
-            <AppenderRef ref="Lambda"/>
-        </Logger>
-        <Logger name="com.amazonaws.services.schemaregistry" level="warn" additivity="false">
-            <AppenderRef ref="Lambda"/>
-        </Logger>
+        <Logger name="software.amazon.awssdk" level="WARN" />
+        <Logger name="software.amazon.awssdk.request" level="WARN" />
     </Loggers>
 </Configuration>

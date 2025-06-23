@@ -18,67 +18,34 @@ Parameters:
     Type: Number
     MinValue: 1
     MaxValue: 10000
-    Default: 1000
+    Default: 500
   LambdaRetries:
     Description: The number of times the lambda function will retry sending records to Firehose
     Type: Number
     MinValue: 1
     MaxValue: 5
     Default: 3
-  OtherSchemaRegistry:
-    Description: Are you only using a Schema Registry other than the AWS Glue Schema Registry
+  GlueSchemaRegistryName:
+    Description: The name of the Glue Schema Registry used for serialization
     Type: String
-    Default: false
-    AllowedValues:
-      - true
-      - false
-  SecondaryDeserializer:
-    Description: Do you have records using a mix of the AWS Glue Schema Registry and another Schema Registry
-    Type: String
-    Default: false
-    AllowedValues:
-      - true
-      - false
-Conditions:
-  CreateVPCResources: !Or
-    - !Equals [ !Ref OtherSchemaRegistry, true ]
-    - !Equals [ !Ref SecondaryDeserializer, true ]
-  NoVPCResources: !And
-    - !Equals [ !Ref OtherSchemaRegistry, false ]
-    - !Equals [ !Ref SecondaryDeserializer, false ]
+    Default: default-registry
 
 Resources:
-  ProcessMSKfunctionCSR:
+  ProcessMSKfunction:
     Type: AWS::Serverless::Function
     DependsOn: MSKToS3LambdaPolicy
-    Condition: CreateVPCResources
     Properties:
       CodeUri: ./target/MSKToS3Lambda-1.0-SNAPSHOT.jar
       Handler: com.amazonaws.kafka.samples.HandlerMSK
-      Runtime: java8.al2
+      Runtime: java11
       Description: Java function
-      MemorySize: 512
+      MemorySize: 1024
+      ReservedConcurrentExecutions: 3
       Timeout: 300
-      VpcConfig:
-        SecurityGroupIds:
-          - Fn::ImportValue:
-              !Sub "${BastionStack}-KafkaClientEC2InstanceSecurityGroupId"
-        SubnetIds:
-          - Fn::ImportValue:
-              !Sub "${VPCStack}-PrivateSubnetMSKOne"
-          - Fn::ImportValue:
-              !Sub "${VPCStack}-PrivateSubnetMSKTwo"
-          - Fn::ImportValue:
-              !Sub "${VPCStack}-PrivateSubnetMSKThree"
       Environment:
         Variables:
-          SCHEMA_REGISTRY_URL:
-            Fn::ImportValue:
-              !Sub "${BastionStack}-SchemaRegistryUrl"
-          DELIVERY_STREAM_NAME: !Ref deliverystream
+          DELIVERY_STREAM_NAME: !Ref DeliveryStream
           RETRIES: !Ref LambdaRetries
-          CSR: !Ref OtherSchemaRegistry
-          SECONDARY_DESERIALIZER: !Ref SecondaryDeserializer
       # Function's execution role
       Role: !GetAtt LambdaRole.Arn
       Events:
@@ -92,37 +59,14 @@ Resources:
             BatchSize: !Ref BatchSize
             Topics:
               - ExampleTopic
-
-  ProcessMSKfunctionGSR:
-    Type: AWS::Serverless::Function
-    DependsOn: MSKToS3LambdaPolicy
-    Condition: NoVPCResources
-    Properties:
-      CodeUri: ./target/MSKToS3Lambda-1.0-SNAPSHOT.jar
-      Handler: com.amazonaws.kafka.samples.HandlerMSK
-      Runtime: java8.al2
-      Description: Java function
-      MemorySize: 512
-      Timeout: 300
-      Environment:
-        Variables:
-          DELIVERY_STREAM_NAME: !Ref deliverystream
-          RETRIES: !Ref LambdaRetries
-          CSR: !Ref OtherSchemaRegistry
-          SECONDARY_DESERIALIZER: !Ref SecondaryDeserializer
-      # Function's execution role
-      Role: !GetAtt LambdaRole.Arn
-      Events:
-        MSKEvent:
-          Type: MSK
-          Properties:
-            StartingPosition: TRIM_HORIZON
-            Stream:
-              Fn::ImportValue:
-                !Sub "${MSKStack}-MSKClusterArn"
-            BatchSize: !Ref BatchSize
-            Topics:
-              - ExampleTopic
+            ProvisionedPollerConfig:
+              MaximumPollers: 3
+              MinimumPollers: 1
+            SchemaRegistryConfig: 
+              SchemaRegistryURI: !Sub 'arn:aws:glue:${AWS::Region}:${AWS::AccountId}:registry/${GlueSchemaRegistryName}'
+              EventRecordFormat: JSON
+              SchemaValidationConfigs:
+                - Attribute: VALUE
 
   MSKToS3LambdaPolicy:
     Type: 'AWS::IAM::Policy'
@@ -139,7 +83,6 @@ Resources:
               - ec2:DeleteNetworkInterface
               - ec2:DescribeSubnets
               - ec2:DescribeSecurityGroups
-              - glue:GetSchemaVersion
             Resource: '*'
           - Effect: Allow
             Action:
@@ -156,7 +99,7 @@ Resources:
           - Effect: Allow
             Action:
               - firehose:PutRecordBatch
-            Resource: !GetAtt deliverystream.Arn
+            Resource: !GetAtt DeliveryStream.Arn
           - Effect: Allow
             Action:
               - kafka:DescribeCluster
@@ -164,6 +107,12 @@ Resources:
             Resource:
               Fn::ImportValue:
                 !Sub "${MSKStack}-MSKClusterArn"
+          - Effect: Allow
+            Action:
+              - glue:GetSchemaByDefinition
+              - glue:GetSchemaVersion
+              - glue:GetRegistry
+            Resource: '*'
       Roles:
         - !Ref LambdaRole
 
@@ -181,21 +130,20 @@ Resources:
       Path: "/"
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
-  s3bucket:
+
+  S3Bucket:
     Type: AWS::S3::Bucket
     DeletionPolicy: Retain
 
-  deliverystream:
+  DeliveryStream:
     Type: AWS::KinesisFirehose::DeliveryStream
     Properties:
       DeliveryStreamType: DirectPut
       ExtendedS3DestinationConfiguration:
-        RoleARN: !GetAtt deliveryRole.Arn
-        BucketARN: !Join
-          - ''
-          - - 'arn:aws:s3:::'
-            - !Ref s3bucket
+        RoleARN: !GetAtt DeliveryRole.Arn
+        BucketARN: !Sub 'arn:aws:s3:::${S3Bucket}'
         Prefix: MSKToS3/
+        ErrorOutputPrefix: errors/
         BufferingHints:
           SizeInMBs: 5
           IntervalInSeconds: 120
@@ -204,20 +152,24 @@ Resources:
           NoEncryptionConfig: NoEncryption
         CloudWatchLoggingOptions:
           Enabled: true
-          LogGroupName: !Join
-            - ''
-            - - 'KDF-MSKToS3'
+          LogGroupName: !Ref DeliveryLogGroup
           LogStreamName: S3Delivery
         S3BackupMode: Disabled
-  deliveryLogGroup:
+
+  DeliveryLogGroup:
     Type : AWS::Logs::LogGroup
     Properties:
       LogGroupClass: STANDARD
-      LogGroupName: /aws/kinesisfirehose/KDF-MSKToS3/
+      LogGroupName: /aws/kinesisfirehose/KDF-MSKToS3
       RetentionInDays: 14
 
+  DeliveryLogStream:
+    Type : AWS::Logs::LogStream
+    Properties:
+      LogGroupName: !Ref DeliveryLogGroup
+      LogStreamName: S3Delivery
 
-  deliveryRole:
+  DeliveryRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -246,23 +198,12 @@ Resources:
                   - 's3:ListBucketMultipartUploads'
                   - 's3:PutObject'
                 Resource:
-                  - !Join
-                    - ''
-                    - - 'arn:aws:s3:::'
-                      - !Ref s3bucket
-                  - !Join
-                    - ''
-                    - - 'arn:aws:s3:::'
-                      - !Ref s3bucket
-                      - '*'
+                  - !Sub 'arn:aws:s3:::${S3Bucket}'
+                  - !Sub 'arn:aws:s3:::${S3Bucket}/*'
               - Effect: Allow
-                Action: 'logs:PutLogEvents'
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
                 Resource:
-                  - !Join
-                    - ''
-                    - - 'arn:aws:logs:'
-                      - !Ref 'AWS::Region'
-                      - ':'
-                      - !Ref 'AWS::AccountId'
-                      - 'log-group:/aws/kinesisfirehose/KDF-MSKToS3/'
-                      - ':log-stream:*'
+                  - !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:${DeliveryLogGroup}:*'

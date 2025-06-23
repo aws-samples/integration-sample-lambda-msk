@@ -7,30 +7,24 @@
     <groupId>com.amazonaws.kafka.samples</groupId>
     <artifactId>MSKToS3Lambda</artifactId>
     <version>1.0-SNAPSHOT</version>
-
-    <repositories>
-        <repository>
-            <id>confluent</id>
-            <url>http://packages.confluent.io/maven/</url>
-        </repository>
-    </repositories>
-
     <properties>
-        <kafka.version>2.4.1</kafka.version>
-        <kafka.scala.version>2.12</kafka.scala.version>
-        <confluent.version>5.4.1</confluent.version>
-        <avro.version>1.11.3</avro.version>
-        <log4j.version>2.17.1</log4j.version>
-        <java.version>1.8</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>11</maven.compiler.source>
+        <maven.compiler.target>11</maven.compiler.target>
+        <java.version>11</java.version>
+        <aws.sdk.version>2.31.63</aws.sdk.version>
+        <aws.lambda.core.version>1.3.0</aws.lambda.core.version>
+        <aws.lambda.events.version>3.15.0</aws.lambda.events.version>
+        <powertools.version>2.1.0</powertools.version>
+        <kafka.version>4.0.0</kafka.version>
     </properties>
 
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>com.amazonaws</groupId>
-                <artifactId>aws-java-sdk-bom</artifactId>
-                <version>1.11.837</version>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>bom</artifactId>
+                <version>${aws.sdk.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -39,148 +33,123 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.apache.avro</groupId>
-            <artifactId>avro</artifactId>
-            <version>${avro.version}</version>
+            <groupId>software.amazon.lambda</groupId>
+            <artifactId>powertools-logging-log4j</artifactId>
+            <version>${powertools.version}</version>
         </dependency>
-        <dependency>
-            <groupId>org.apache.avro</groupId>
-            <artifactId>avro-maven-plugin</artifactId>
-            <version>${avro.version}</version>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/io.confluent/kafka-avro-serializer -->
-        <dependency>
-            <groupId>io.confluent</groupId>
-            <artifactId>kafka-avro-serializer</artifactId>
-            <version>${confluent.version}</version>
-        </dependency>
-
-        <!-- Apache Log4J2 binding for SLF4J -->
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-core</artifactId>
-            <version>${log4j.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-api</artifactId>
-            <version>${log4j.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-slf4j-impl</artifactId>
-            <version>${log4j.version}</version>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/com.beust/jcommander -->
-        <dependency>
-            <groupId>com.beust</groupId>
-            <artifactId>jcommander</artifactId>
-            <version>1.78</version>
-        </dependency>
-
-        <!-- https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-kinesis -->
-        <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-kinesis</artifactId>
-            <version>1.11.837</version>
-        </dependency>
-
-        <!-- https://mvnrepository.com/artifact/com.google.code.gson/gson -->
-        <dependency>
-            <groupId>com.google.code.gson</groupId>
-            <artifactId>gson</artifactId>
-            <version>2.8.9</version>
-        </dependency>
-
         <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-lambda-java-core</artifactId>
-            <version>1.2.1</version>
+            <version>${aws.lambda.core.version}</version>
         </dependency>
         <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-lambda-java-events</artifactId>
-            <version>3.2.0</version>
+            <version>${aws.lambda.events.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-lambda-java-log4j2</artifactId>
-            <version>1.2.0</version>
+            <groupId>software.amazon.lambda</groupId>
+            <artifactId>powertools-kafka</artifactId>
+            <version>${powertools.version}</version>
         </dependency>
-
         <dependency>
-            <groupId>com.github.edwgiz</groupId>
-            <artifactId>maven-shade-plugin.log4j2-cachefile-transformer</artifactId>
-            <version>2.13.0</version>
+            <groupId>org.aspectj</groupId>
+            <artifactId>aspectjrt</artifactId>
+            <version>1.9.22</version>
         </dependency>
-
         <dependency>
-            <groupId>software.amazon.glue</groupId>
-            <artifactId>schema-registry-serde</artifactId>
-            <version>1.1.5</version>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka-clients</artifactId>
+            <version>${kafka.version}</version>
         </dependency>
-
-
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>firehose</artifactId>
+            <version>${aws.sdk.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>netty-nio-client</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.18.2</version>
+        </dependency>
     </dependencies>
 
     <build>
         <plugins>
-            <!-- Maven Compiler Plugin-->
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.1</version>
-                <configuration>
-                    <source>${java.version}</source>
-                    <target>${java.version}</target>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.avro</groupId>
-                <artifactId>avro-maven-plugin</artifactId>
-                <version>${avro.version}</version>
-                <executions>
-                    <execution>
-                        <phase>generate-sources</phase>
-                        <goals>
-                            <goal>schema</goal>
-                        </goals>
-                        <configuration>
-                            <sourceDirectory>${project.basedir}/src/main/resources/avro/</sourceDirectory>
-                            <outputDirectory>${project.basedir}/src/main/java/</outputDirectory>
-                        </configuration>
-                    </execution>
-                </executions>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.5.2</version>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.2.2</version>
+                <version>3.4.1</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.apache.logging.log4j</groupId>
+                        <artifactId>log4j-transform-maven-shade-plugin-extensions</artifactId>
+                        <version>0.1.0</version>
+                    </dependency>
+                </dependencies>
                 <configuration>
-                    <createDependencyReducedPom>false</createDependencyReducedPom>
+                    <createDependencyReducedPom>true</createDependencyReducedPom>
+                    <transformers>
+                    <transformer implementation="org.apache.logging.log4j.maven.plugins.shade.transformer.Log4j2PluginCacheFileTransformer"/>
+                    <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                    <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                        <manifestEntries>
+                        <Multi-Release>true</Multi-Release>
+                        </manifestEntries>
+                    </transformer>
+                    </transformers>
                 </configuration>
-                <executions>
+                  <executions>
                     <execution>
                         <phase>package</phase>
                         <goals>
                             <goal>shade</goal>
                         </goals>
-                        <configuration>
-                            <transformers>
-                                <transformer implementation="com.github.edwgiz.maven_shade_plugin.log4j2_cache_transformer.PluginsCacheFileTransformer">
-                                </transformer>
-                            </transformers>
-                        </configuration>
                     </execution>
                 </executions>
-                <dependencies>
-                    <!-- https://mvnrepository.com/artifact/com.github.edwgiz/maven-shade-plugin.log4j2-cachefile-transformer -->
-                    <dependency>
-                        <groupId>com.github.edwgiz</groupId>
-                        <artifactId>maven-shade-plugin.log4j2-cachefile-transformer</artifactId>
-                        <version>2.13.0</version>
-                    </dependency>
-                </dependencies>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+                <configuration>
+                    <release>${java.version}</release>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>dev.aspectj</groupId>
+                <artifactId>aspectj-maven-plugin</artifactId>
+                <version>1.13.1</version>
+                <configuration>
+                    <source>11</source> <!-- or higher -->
+                    <target>11</target> <!-- or higher -->
+                    <complianceLevel>11</complianceLevel> <!-- or higher -->
+                    <aspectLibraries>
+                        <aspectLibrary>
+                            <groupId>software.amazon.lambda</groupId>
+                            <artifactId>powertools-kafka</artifactId>
+                        </aspectLibrary>                       
+                        <aspectLibrary>
+                            <groupId>software.amazon.lambda</groupId>
+                            <artifactId>powertools-logging</artifactId>
+                        </aspectLibrary>
+                    </aspectLibraries>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>compile</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
