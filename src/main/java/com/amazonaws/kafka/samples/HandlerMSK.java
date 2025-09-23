@@ -72,7 +72,7 @@ public class HandlerMSK implements RequestHandler<ConsumerRecords<String, String
 
     @Override
     @Logging(logEvent = true)
-    @Deserialization(type = DeserializationType.KAFKA_JSON)
+    @Deserialization(type = DeserializationType.KAFKA_AVRO)
     public String handleRequest(ConsumerRecords<String, String> records, Context context) {
         logger.info("Processing batch with {} records for Request ID {} \n", records.count(), context.getAwsRequestId());
         processRecords(records, context.getAwsRequestId());
