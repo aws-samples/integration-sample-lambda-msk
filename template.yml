@@ -46,6 +46,10 @@ Resources:
         Variables:
           DELIVERY_STREAM_NAME: !Ref DeliveryStream
           RETRIES: !Ref LambdaRetries
+          OUTPUT_TOPIC: clickstream-json
+          BOOTSTRAP_SERVERS:
+            Fn::ImportValue:
+              !Sub "${MSKStack}-MSKClusterBrokerString"
       # Function's execution role
       Role: !GetAtt LambdaRole.Arn
       Events:
@@ -92,6 +96,8 @@ Resources:
               - kafka-cluster:DescribeTopic
               - kafka-cluster:ReadData
               - kafka-cluster:DescribeClusterDynamicConfiguration
+              - kafka-cluster:WriteData
+              - kafka-cluster:CreateTopic
             Resource:
                   - !Sub 'arn:aws:kafka:${AWS::Region}:${AWS::AccountId}:cluster/*'
                   - !Sub 'arn:aws:kafka:${AWS::Region}:${AWS::AccountId}:topic/*'

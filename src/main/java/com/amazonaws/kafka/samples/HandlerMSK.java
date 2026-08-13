@@ -23,11 +23,22 @@ public class HandlerMSK implements RequestHandler<ConsumerRecords<String, String
     
     private void processRecords(ConsumerRecords<String, String> records, String requestId) {
         SendKinesisDataFirehose sendKinesisDataFirehose = new SendKinesisDataFirehose();
+        boolean kafkaEnabled = SendKafkaJSON.isEnabled();
         
         for (ConsumerRecord<String, String> record : records) {
             // Transform the record payload
             String transformedRecord = transformPayload(record.value(), requestId);
             sendKinesisDataFirehose.addFirehoseRecordToBatch(transformedRecord.concat("\n"), requestId);
+            
+            // Also produce plain JSON to the output Kafka topic if configured
+            if (kafkaEnabled) {
+                SendKafkaJSON.send(transformedRecord);
+            }
+        }
+        
+        // Flush Kafka producer to ensure all records are sent
+        if (kafkaEnabled) {
+            SendKafkaJSON.flush();
         }
         
         SendKinesisDataFirehose.sendFirehoseBatch(sendKinesisDataFirehose.getFirehoseBatch(), 0, requestId, SendKinesisDataFirehose.batchNumber.incrementAndGet());
