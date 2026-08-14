@@ -49,7 +49,7 @@ Resources:
           OUTPUT_TOPIC: clickstream-json
           BOOTSTRAP_SERVERS:
             Fn::ImportValue:
-              !Sub "${MSKStack}-MSKClusterBrokerString"
+              !Sub "${MSKStack}-MSKClusterBrokerStringSaslIam"
       # Function's execution role
       Role: !GetAtt LambdaRole.Arn
       Events:
