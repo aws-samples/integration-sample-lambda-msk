@@ -37,7 +37,7 @@ Resources:
     Properties:
       CodeUri: ./target/MSKToS3Lambda-1.0-SNAPSHOT.jar
       Handler: com.amazonaws.kafka.samples.HandlerMSK
-      Runtime: java11
+      Runtime: java21
       Description: Java function
       MemorySize: 1024
       ReservedConcurrentExecutions: 3
