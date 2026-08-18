@@ -29,6 +29,12 @@ Parameters:
     Description: The name of the Glue Schema Registry used for serialization
     Type: String
     Default: default-registry
+  LambdaSubnetIds:
+    Description: Subnets the function runs in. Must be able to route to the MSK brokers.
+    Type: List<AWS::EC2::Subnet::Id>
+  LambdaSecurityGroupIds:
+    Description: Security groups for the function. Must be allowed to reach the brokers.
+    Type: List<AWS::EC2::SecurityGroup::Id>
 
 Resources:
   ProcessMSKfunction:
@@ -37,7 +43,7 @@ Resources:
     Properties:
       CodeUri: ./target/MSKToS3Lambda-1.0-SNAPSHOT.jar
       Handler: com.amazonaws.kafka.samples.HandlerMSK
-      Runtime: java11
+      Runtime: java21
       Description: Java function
       MemorySize: 1024
       ReservedConcurrentExecutions: 3
@@ -46,6 +52,17 @@ Resources:
         Variables:
           DELIVERY_STREAM_NAME: !Ref DeliveryStream
           RETRIES: !Ref LambdaRetries
+          OUTPUT_TOPIC: clickstream-json
+          BOOTSTRAP_SERVERS:
+            Fn::ImportValue:
+              !Sub "${MSKStack}-MSKClusterBrokerStringSaslIam"
+      # Reaching the brokers to produce requires running inside the VPC.
+      # The MSK security group allows 9092-9098 from itself, so joining it
+      # grants broker access without a new ingress rule. The broker subnets
+      # route to a NAT gateway, so the Firehose calls still work.
+      VpcConfig:
+        SecurityGroupIds: !Ref LambdaSecurityGroupIds
+        SubnetIds: !Ref LambdaSubnetIds
       # Function's execution role
       Role: !GetAtt LambdaRole.Arn
       Events:
@@ -92,6 +109,8 @@ Resources:
               - kafka-cluster:DescribeTopic
               - kafka-cluster:ReadData
               - kafka-cluster:DescribeClusterDynamicConfiguration
+              - kafka-cluster:WriteData
+              - kafka-cluster:CreateTopic
             Resource:
                   - !Sub 'arn:aws:kafka:${AWS::Region}:${AWS::AccountId}:cluster/*'
                   - !Sub 'arn:aws:kafka:${AWS::Region}:${AWS::AccountId}:topic/*'
